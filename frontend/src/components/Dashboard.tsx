@@ -85,7 +85,8 @@ export default function Dashboard() {
     setActiveTab("activity"); // Auto switch to activity tab to watch it run
 
     try {
-      const response = await fetch("http://localhost:8000/api/scenario", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await fetch(`${apiUrl}/api/scenario`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scenario_type: scenario, payload }),

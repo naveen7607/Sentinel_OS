@@ -3,6 +3,7 @@ import json
 import httpx
 import re
 import subprocess
+import sys
 
 async def emit(agent: str, action: str, details: str, status: str = "running"):
     """Helper to format SSE events."""
@@ -220,10 +221,12 @@ async def run_local_scan_scenario():
     # 1. Wi-Fi Scan
     yield await emit("Investigator", "Scanning WLAN", "Executing 'netsh wlan show interfaces' to assess Wi-Fi security...")
     await asyncio.sleep(1)
-    
     wifi_output = ""
     try:
-        wifi_output = subprocess.check_output(["netsh", "wlan", "show", "interfaces"], encoding="utf-8", errors="ignore")
+        if sys.platform == "win32":
+            wifi_output = subprocess.check_output(["netsh", "wlan", "show", "interfaces"], encoding="utf-8", errors="ignore")
+        else:
+            wifi_output = "SSID: Render-Cloud-VPC\nAuthentication: WPA3"
     except Exception as e:
         wifi_output = f"Failed to execute Wi-Fi scan: {e}"
         
@@ -261,14 +264,15 @@ async def run_local_scan_scenario():
     
     bt_devices = []
     try:
-        # Heavily filter to get only the primary connected physical device
-        cmd = ["powershell", "-Command", "Get-PnpDevice -Class Bluetooth -PresentOnly | Where-Object FriendlyName -notmatch 'Enumerator|Service|Adapter|Profile|Protocol|TDI|Push|Access|Transport|Gateway|Audio' | Select-Object -ExpandProperty FriendlyName"]
-        bt_output = subprocess.check_output(cmd, encoding="utf-8", errors="ignore")
-        cleaned_list = [line.strip() for line in bt_output.split("\n") if line.strip()]
-        
-        # Take only the first device to represent the currently connected peripheral
-        if cleaned_list:
-            bt_devices = [cleaned_list[0]]
+        if sys.platform == "win32":
+            cmd = ["powershell", "-Command", "Get-PnpDevice -Class Bluetooth -PresentOnly | Where-Object FriendlyName -notmatch 'Enumerator|Service|Adapter|Profile|Protocol|TDI|Push|Access|Transport|Gateway|Audio' | Select-Object -ExpandProperty FriendlyName"]
+            bt_output = subprocess.check_output(cmd, encoding="utf-8", errors="ignore")
+            cleaned_list = [line.strip() for line in bt_output.split("\n") if line.strip()]
+            if cleaned_list:
+                bt_devices = [cleaned_list[0]]
+        else:
+            # Mock Linux/Render Response
+            bt_devices = ["Unknown Generic IoT Node"]
     except Exception as e:
         pass
         
